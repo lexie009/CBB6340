@@ -169,7 +169,7 @@ This avoids performing an additional O(n) traversal to count all qualifying pati
 
 This direct calculation works because the records are sorted and 41.5 occurs only once in this dataset. If multiple patients had the same target age, a standard binary search could return any matching index. In that situation, the search would need to find the last occurrence of 41.5 in the descending list. The count of patients with ages greater than or equal to 41.5 would then be `last_matching_index + 1`.
 
-## Age Range Queries
+### Age Range Queries
 
 I implemented a range-query function that counts patients satisfying:
 

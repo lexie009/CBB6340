@@ -83,6 +83,7 @@ Gender is encoded as an attribute of each `<patient>` element in the XML file. F
          gender="female"
          name="Tammy Martin">
 </patient>
+```
 
 First 10 gender values: ['female', 'female', 'male', 'male', 'male', 'female', 'female', 'female', 'female', 'male']
 Distinct gender categories: ['female', 'male', 'unknown']
@@ -92,7 +93,6 @@ male: 158992
 unknown: 72
 
 <img width="790" height="490" alt="patient gender distribution" src="https://github.com/user-attachments/assets/7b69c7ca-d519-4b97-af9c-2611f9554ed1" />
-
 
 ### Age Sorting & Top K Retreival 
 Sort patients based on their age. And here's the result: Oldest patient:
@@ -111,6 +111,7 @@ Top 10 oldest patients:
 8. Helen Guest, age=84.9962, gender=female
 9. Elizabeth Jackson, age=84.9962, gender=female
 10. Agnes Weaver, age=84.9958, gender=female
+
 
 ### Algorithmic Trade-offs: Finding the Second-Oldest Patient
 To find the second-oldest patient without sorting the entire dataset, I used a single-pass algorithm. The algorithm maintains two variables: `oldest` and `second_oldest`.

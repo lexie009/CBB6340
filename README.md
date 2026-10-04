@@ -1,6 +1,6 @@
 ## CBB6340
 
-# Daily New COVID-19 Cases (Project 9.10)
+# Exercise 1: Analyzing Population Data Daily New COVID-19 Cases (Project 9.10)
 
 The following figure compares daily new COVID-19 cases in California,
 New York, and Texas.
@@ -47,6 +47,132 @@ increases, particularly toward the end of the dataset. A likely explanation is
 that Florida changed from daily reporting to less frequent batch reporting.
 Therefore, the calculated daily case values represent the dates cases were
 reported, not necessarily the dates on which infections occurred.
+
+# Exercise 2: Analyzing Population Data (Project 9.10)
+
+### Explore the dataset
+
+I loaded population.json using Python's built-in json module. The top-level JSON structure is a list containing 152,361 individual
+records. Each record is a dictionary with the following fields:
+
+| Field | Description |
+|---|---|
+| id | Individual identifier |
+| name | Individual's name |
+| demographics.age | Age |
+| demographics.household_income_band | Household income category |
+| demographics.eyecolor | Eye color |
+| last_measurements.weight | Weight |
+| last_measurements.temperature | Temperature |
+
+
+The demographics and last_measurements fields contain nested dictionaries. Therefore, age is accessed using record["demographics"]["age"], and weight is accessed using record["last_measurements"]["weight"].
+
+Here is the example of the first record:
+{
+  "id": 1000000,
+  "demographics": {
+    "age": 88.89568973615539,
+    "household_income_band": "< 35k",
+    "eyecolor": "brown"
+  },
+  "name": "Edna Phelps",
+  "last_measurements": {
+    "weight": 67.12244970473641,
+    "temperature": 37.45
+  }
+}
+Top-level fields: ['demographics', 'id', 'last_measurements', 'name']
+Demographic fields: ['age', 'eyecolor', 'household_income_band']
+Measurement fields: ['temperature', 'weight']
+
+
+### Analyze Age Distribution
+
+I analyzed the age distribution and got the result in below: 
+Mean age: 39.5105
+Standard deviation: 24.1527
+Minimum age: 0.0007
+Maximum age: 99.9915
+
+I explicitly compared histograms with 10, 30, and 100 bins. With 10 bins, the broad distribution was visible, but the wide intervals obscured the location of the drop in frequency around age 65. With 30 bins, this transition was clear and the histogram remained easy to interpret. With 100 bins, smaller fluctuations became visible, but they did not change the main interpretation.
+
+<img width="1990" height="390" alt="image" src="https://github.com/user-attachments/assets/a22b736a-f33e-4772-9699-93545ba18336" />
+
+I selected 30 bins because this setting clearly shows the major
+change in frequency without adding unnecessary visual detail.
+
+<img width="790" height="490" alt="image" src="https://github.com/user-attachments/assets/ab2db0ac-d690-4931-acda-22e5b091cd41" />
+
+### Analyze Weight Distribution
+Ages are approximately evenly distributed from 0 to around 65. The frequency drops sharply around age 65 and remains relatively flat at a lower level through approximately age 100.
+
+The minimum age is close to zero, and the maximum is close to 100. Neither endpoint alone identifies an obvious anomalous record. The distribution is not a single bell-shaped distribution.
+
+Below is the summary statistics:
+| Statistic | Weight |
+|---|---:|
+| Mean | 60.8841 |
+| Standard deviation | 18.4118 |
+| Minimum | 3.3821 |
+| Maximum | 100.4358 |
+
+For making a bar graph to analyze weight distribution, I compared histograms with 10, 30, and 100 bins.
+
+With 10 bins, the histogram showed a broad concentration around 60–80, but it concealed a narrow peak. With 30 bins, the peak became more apparent, although it was still combined with nearby values. With 100 bins, the narrow spike near 68 could be distinguished clearly from the surrounding broader distribution.
+
+<img width="1489" height="390" alt="image" src="https://github.com/user-attachments/assets/ab0ffeaa-dc21-4f47-94d2-82eec1196271" />
+
+I selected 100 bins because the finer intervals reveal an important feature that is obscured by wider bins. The large dataset provides enough observations to make this finer representation informative.
+
+<img width="790" height="490" alt="image" src="https://github.com/user-attachments/assets/7fa86b0d-0190-4afa-8e69-04a7814d5387" />
+
+Most weights are concentrated around 60–80, with a lower-frequency tail extending toward smaller values. The distribution contains a particularly sharp spike near 68.
+
+A direct count showed that 22,613 records have a weight of exactly 68.0. This repeated value could reflect rounding, a default value, or the data-generation process. The file alone does not establish which explanation is correct.
+
+The minimum and maximum weights are 3.3821 and 100.4358. These values should be interpreted in relation to age rather than automatically classified as anomalies.
+
+## General Relationship
+
+The scatterplot shows a strong positive relationship between age and weight from approximately age 0 to 20. After approximately
+age 20, weights form a broad, mostly horizontal band. Thus, the relationship is not well described by one straight line across all ages. Weight increases strongly during younger ages and then approximately levels off in adulthood.
+
+<img width="989" height="590" alt="image" src="https://github.com/user-attachments/assets/e7ad7907-f844-4009-81d4-0bfa8cb0987b" />
+
+A horizontal concentration at weight 68 is also visible, consistent with the repeated values identified in the weight analysis.
+
+### Step-by-Step Anomaly Identification
+
+1. I plotted all records with age on the horizontal axis and weight on the vertical axis.
+
+2. I inspected the main pattern: younger individuals follow an increasing trend, while adults mostly occupy a higher weight band.
+
+3. I noticed an isolated point near age 41 and weight 22, well below the main adult cluster.
+
+4. Based on this visual observation, I filtered the original records for age greater than 20 and weight less than 30.
+
+5. The filter returned exactly one record. I retrieved its name, identifier, age, and weight, then marked it on the scatterplot.
+
+The thresholds were chosen to isolate the visually observed point. They are not a formal statistical or medical definition of an outlier.
+
+Below is the identified individual:
+Identified Individual
+
+| Field | Value |
+|---|---|
+| Name | Anthony Freeman |
+| ID | 1002902 |
+| Age | 41.3 |
+| Weight | 21.7 |
+
+<img width="989" height="590" alt="image" src="https://github.com/user-attachments/assets/4956c3d3-52b1-4029-b4a9-16098b10fa35" />
+
+### Interpretation and Implications
+
+Age 41.3 is ordinary when considered alone, and weight 21.7 occurs within the overall range of the dataset. However, their combination clearly deviates from the main adult age–weight pattern. This demonstrates why analyzing attributes jointly can reveal anomalies that separate summary statistics or histograms may miss.
+
+The record should be flagged for verification. Possible explanations include a data-entry error, a unit mismatch, an incorrect linkage between records, or a genuine unusual case. The plot alone cannot determine the cause, so the record should not be automatically deleted or corrected without checking its source.
 
 
 # Efficiently Searching Patient Data (Project 9.17)

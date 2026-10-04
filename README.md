@@ -489,7 +489,7 @@ Nearly sorted input does not always guarantee good performance for alg1. For exa
 
 The empirical plots and algorithm mechanics support choosing alg2 for large inputs with unknown or disordered structure. For input known to be already sorted, the early stopping behavior of alg1 makes it faster in this experiment.
 
-### A3: Approximate Membership, Reconstruction Risks, and Trade-offs in Health Data Structures 
+# A3: Approximate Membership, Reconstruction Risks, and Trade-offs in Health Data Structures 
 
 ## Reconstruction Analysis
 

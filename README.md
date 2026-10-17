@@ -561,3 +561,47 @@ Therefore, a standard Bloom filter gains little structural or security benefit f
 
 <img width="989" height="590" alt="image" src="https://github.com/user-attachments/assets/507a4dfc-edc7-49e8-9884-bacdae8fa25c" />
 
+
+# Exercise 5: Data exploration 2 (Project 10.15)
+
+### project overview
+This project implements a three-stage pipeline:
+
+1. Retrieve and parse 2025 PubMed metadata.
+2. Generate 768-dimensional document embeddings using allenai/specter.
+3. Reload the saved embeddings and visualize them using PCA.
+
+The dataset contains 2,000 distinct papers: 1,000 selected using an
+Alzheimer's disease query and 1,000 using a Cancer query.
+
+### PCA visualizations
+<img width="1990" height="592" alt="image" src="https://github.com/user-attachments/assets/4f58a069-7a61-4b4d-9c12-451a80d09a84" />
+
+## 1. Why Separate the Pipeline into Three Steps?
+
+Separating retrieval, embedding generation, and visualization allowseach stage to be rerun independently. For example, changing plot colors or inspecting another componentpair does not require downloading the papers or regenerating embeddings. If embedding generation is interrupted, the saved JSON and PMID-indexed shelf allow work to resume. Intermediate files also make debugging easier. Missing metadata can be investigated separately from model inference or plotting problems. The main downsides are additional storage, more files to manage, and the possibility of inconsistent intermediate outputs. For example, embeddings could become outdated if the paper text changes. A reliable workflow should therefore associate the dataset, model configuration, PMID order, and outputs with the same run.
+
+# 2. Comparison with the 2023 In-Class Results
+
+The 2025 results largely reproduce the qualitative patterns observed in the 2023 in-class analysis. In both datasets, Alzheimer’s and Cancer papers form distinct but partially overlapping groups in the PC0–PC1 and PC0–PC2 plots. Alzheimer’s papers are concentrated toward negative PC0 values, while Cancer papers generally occupy positive PC0 values. In both years, the Cancer group also appears more broadly dispersed, suggesting greater variation within the selected Cancer literature.
+In contrast, the PC1–PC2 plots show substantial mixing between the two groups in both datasets. This suggests that PC0 captures much of the visible distinction between the disease topics, whereas PC1 and PC2 capture variation that is less specific to the disease labels. The 2025 PC0 component explains 17.5% of the total variance, so this separation still represents only part of the original embedding structure.
+The detailed cluster shapes differ between years, particularly in the PC1–PC2 projection, but these differences do not necessarily indicate changes in the literature over time. They may reflect differences in the sampled papers, abstract completeness, or the PCA directions fitted separately to each dataset. Additionally, the 2023 plots explicitly identify papers matching both searches, whereas the 2025 plots assign each paper to one retrieval group. Overall, the results support a consistent broad distinction between the two topics, alongside shared semantic content and considerable within-topic variation.
+
+# 3. What Semantic Information Can PCA Lose?
+
+PCA retains orthogonal linear directions with the greatest variance. These directions do not necessarily preserve every distinction that
+matters for document meaning.
+
+Two papers may differ in a specific molecular mechanism, patient population, or treatment strategy along dimensions that explain little total variance. Those distinctions may disappear when only two or three components are retained.
+
+The embedding space may also contain curved structures or complex local neighborhoods that a low-dimensional linear projection cannot fully preserve. Papers that are distant in the original space may appear close together in a plot, while meaningful local relationships may be compressed or distorted. Consequently, visual overlap does not prove semantic equivalence, and separation in a plot is only a partial view of the original 768-dimensional representation.
+
+# 4. Overlap between the two groups
+The groups separate mainly along PC0 but overlap substantially in PC1–PC2. The table suggests that shared topics and methods may explain some overlap: Cancer-labeled papers discuss cognition and neurological conditions, while Alzheimer-labeled papers include laboratory and diagnostic methods. However, proximity in PCA space does not necessarily indicate similarity in all 768 dimensions.
+
+# 5. Effects of text quality
+Missing abstracts can remove disease-specific context, causing embeddings to emphasize broad topics or methods. Inconsistent section headings, ambiguous acronyms, and the 512-token limit may also distort representations. These could contribute to unusual positions, but the graph and table alone cannot confirm this.
+
+# 6. Scaling to two million papers
+At two million papers, float32 embeddings alone require approximately 6.1 GB. Model inference, RAM usage, and frequent shelve writes could all become bottlenecks. I would process bounded batches, store embeddings in sharded arrays with a PMID-to-row mapping, and use IncrementalPCA to avoid loading the entire dataset into memory.
+

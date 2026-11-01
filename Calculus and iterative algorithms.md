@@ -169,12 +169,7 @@ This approach assumes a deterministic, sufficiently smooth simulation. For noisy
 The algorithm uses projected gradient descent:
 
 $$
-\mathbf{x}_{k+1}
-=
-\Pi_{[0,1]^2}
-\left(
-\mathbf{x}_k-\alpha_k\nabla E(\mathbf{x}_k)
-\right),
+\mathbf{x}_{k+1} = \Pi_{[0,1]^2}\left(\mathbf{x}_k - \alpha_k \nabla E(\mathbf{x}_k)\right).
 $$
 
 where $\mathbf{x}_k=(a_k,b_k)$ and $\Pi$ projects the update onto the permitted dosage domain.
@@ -196,15 +191,11 @@ $$
 I enforce these constraints by projecting each proposed update onto the feasible domain:
 
 $$
-a_{\mathrm{new}}
-=
-\min(1,\max(0,a_{\mathrm{proposed}})),
+a_{\mathrm{new}} = \min(1,\max(0,a_{\mathrm{proposed}})).
 $$
 
 $$
-b_{\mathrm{new}}
-=
-\min(1,\max(0,b_{\mathrm{proposed}})).
+b_{\mathrm{new}} = \min(1,\max(0,b_{\mathrm{proposed}})).
 $$
 
 For example, a proposed dosage of $a=1.04$ becomes $a=1$, while $b=-0.03$ becomes $b=0$. The API client also checks all coordinates before sending a request, and finite-difference probes remain within the same bounds.
@@ -214,11 +205,12 @@ For example, a proposed dosage of $a=1.04$ becomes $a=1$, while $b=-0.03$ become
 I use several complementary stopping rules:
 
 - **Projected gradient residual:** Stop when
-  $$
-  \left\|
-  \mathbf{x}-\Pi_{[0,1]^2}(\mathbf{x}-\nabla E(\mathbf{x}))
-  \right\|_2\leq10^{-3}.
-  $$
+$$
+\left\|
+\mathbf{x}-\Pi_{[0,1]^2}
+\left(\mathbf{x}-\nabla E(\mathbf{x})\right)
+\right\|_2 \leq 10^{-3}.
+$$
   Unlike the ordinary gradient norm, this measure can recognize a constrained optimum at a boundary, where the gradient may point outside the feasible domain. The tolerance is an illustrative numerical criterion and does not establish biological or clinical optimality.
 
 - **Small improvements:** Stop after three consecutive accepted updates improve the score by no more than $10^{-6}\max(1,|E|)$. Requiring consecutive small improvements reduces the chance of stopping after a single unproductive step, although this remains a heuristic.

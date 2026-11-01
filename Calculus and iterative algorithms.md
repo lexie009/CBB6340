@@ -126,3 +126,144 @@ However, the heatmaps cannot establish exactly which reduction would prevent hos
 probabilities, and lengths of stay. The appropriate intervention must reduce expected hospital demand below available capacity; delaying the 
 peak alone does not guarantee this outcome.
 
+### Exercise 2: In Silico Synergy Optimization & Resource-Constrained Experimental Design
+## Part 1: API Architecture & Ethical Query Restrictions
+# RESTful service design for  https://ramcdougal.com/cgi-bin/error_function.py?a=0.4&b=0.2Links to an external site
+
+The endpoint does not follow a clean, resource-oriented URL design because /cgi-bin/error_function.py exposes the server’s implementation technology and names a computational script rather than a resource. However, using query parameters such as a and b is not itself a violation of REST principles, and GET is appropriate if the request only retrieves a simulated score without changing server state. The URL alone is insufficient to determine whether the complete service satisfies all REST constraints.
+
+Standardized endpoints make computational biology pipelines easier to integrate and maintain because they provide consistent parameter names, response formats, units, and error handling across assay platforms.
+
+# Reduction and query efficiency
+
+The principle of Reduction maps to minimizing unnecessary API evaluations while retaining enough information to make a reliable optimization decision. My pipeline will cache previously evaluated dose pairs, reuse existing scores when estimating gradients, apply explicit stopping criteria, and enforce a shared query budget across all starting points. Multiple starting points will help explore different basins without performing an exhaustive grid search. In a real experiment, however, repeated measurements may still be necessary to quantify biological variability.
+
+# User-Agent and request delays
+
+A custom User-Agent identifies the automated client and helps the server distinguish legitimate coursework requests from unidentified automated traffic. It is not universally required by HTTP, but it may be required by this service’s access policy. The pipeline will send requests sequentially with a configurable delay and will respect rate-limit responses, including Retry-After when provided. Failed requests will also count toward the request budget, preventing retries from creating uncontrolled traffic.
+
+## Part 2: Custom 2D Gradient Descent Engine & Experimental Defense
+
+
+# 1. Finite Difference Derivative Estimation
+
+Because the API returns only the disease burden $E(a,b)$, I estimate the gradient numerically:
+
+$$
+\nabla E(a,b)
+\approx
+\left(
+\frac{E(a+h,b)-E(a,b)}{h},
+\frac{E(a,b+h)-E(a,b)}{h}
+\right).
+$$
+
+I use $h=10^{-4}$ in the normalized dosage domain. This is a practical initial choice that provides a small perturbation without approaching machine precision. It is not a universally optimal step size: its accuracy depends on the smoothness and numerical precision of the API response.
+
+The current score is reused, so a gradient estimate requires at most two additional API requests. This is more query-efficient than central differences, which generally require four perturbed evaluations for two parameters, although one-sided differences have first-order truncation error rather than second-order error. Near an upper boundary, the algorithm uses a backward difference to keep all queries feasible.
+
+This approach assumes a deterministic, sufficiently smooth simulation. For noisy biological measurements, very small perturbations may be overwhelmed by experimental variability, requiring larger steps or replicate measurements.
+
+# 2. Learning Rate Choice
+
+The algorithm uses projected gradient descent:
+
+$$
+\mathbf{x}_{k+1}
+=
+\Pi_{[0,1]^2}
+\left(
+\mathbf{x}_k-\alpha_k\nabla E(\mathbf{x}_k)
+\right),
+$$
+
+where $\mathbf{x}_k=(a_k,b_k)$ and $\Pi$ projects the update onto the permitted dosage domain.
+
+I start with a learning rate of $\alpha=0.1$. Because the objective's scale and curvature are unknown, this value is an initial trial rather than a guaranteed stable rate. I also cap the Euclidean length of each proposed update at 0.1, which limits abrupt changes in the normalized dosages.
+
+The algorithm evaluates each proposed point and accepts it only if it reduces the burden and meets a sufficient-decrease condition. Otherwise, it halves the learning rate and tries again, with at most eight trials per iteration. Following a successful update, the next trial learning rate increases by 20%, up to a maximum of 0.25.
+
+This rule balances faster progress against the risk of overshooting a narrow minimum. Backtracking adds evaluation costs, so the number of trials is limited and all requests count toward the total budget. These controls improve numerical reliability but do not guarantee that a narrow optimum will be found.
+
+# 3. Dosage Bounds
+
+Both dosages must satisfy:
+
+$$
+0\leq a\leq1,\qquad 0\leq b\leq1.
+$$
+
+I enforce these constraints by projecting each proposed update onto the feasible domain:
+
+$$
+a_{\mathrm{new}}
+=
+\min(1,\max(0,a_{\mathrm{proposed}})),
+$$
+
+$$
+b_{\mathrm{new}}
+=
+\min(1,\max(0,b_{\mathrm{proposed}})).
+$$
+
+For example, a proposed dosage of $a=1.04$ becomes $a=1$, while $b=-0.03$ becomes $b=0$. The API client also checks all coordinates before sending a request, and finite-difference probes remain within the same bounds.
+
+# 4. Convergence and Termination Criteria
+
+I use several complementary stopping rules:
+
+- **Projected gradient residual:** Stop when
+  $$
+  \left\|
+  \mathbf{x}-\Pi_{[0,1]^2}(\mathbf{x}-\nabla E(\mathbf{x}))
+  \right\|_2\leq10^{-3}.
+  $$
+  Unlike the ordinary gradient norm, this measure can recognize a constrained optimum at a boundary, where the gradient may point outside the feasible domain. The tolerance is an illustrative numerical criterion and does not establish biological or clinical optimality.
+
+- **Small improvements:** Stop after three consecutive accepted updates improve the score by no more than $10^{-6}\max(1,|E|)$. Requiring consecutive small improvements reduces the chance of stopping after a single unproductive step, although this remains a heuristic.
+
+- **Query budget:** Allow at most 200 attempted API requests across the client. Cached evaluations do not require new requests, while failed HTTP requests still count toward the limit.
+
+- **Iteration and backtracking limits:** Stop after 60 iterations or if no improving step is found within eight backtracking trials.
+
+These limits are explicit computational choices rather than experimentally established standards. They prevent indefinite spending when each evaluation represents a costly cohort. The program reports the stopping reason because reaching a budget or backtracking limit does not prove convergence.
+
+A single run identifies a candidate minimum within the starting point's basin of attraction; it does not establish that the result is the global minimum. Multiple starting points will be examined in Part 3.
+
+## Part 3: Non-Convex Fitness Landscapes & Multi-Start Strategy
+
+# Optimization Results and Classification
+
+The five trajectories reached two distinct candidate minima:
+
+| Classification | Compound A dosage | Compound B dosage | Disease burden |
+|:---|---:|---:|---:|
+| Global-minimum candidate | 0.711929 | 0.168905 | ≈1.000000 |
+| Local-minimum candidate | 0.216127 | 0.689268 | ≈1.100000 |
+
+The lower-burden candidate was reached from starting points $(0.40,0.20)$ and $(0.75,0.25)$. The remaining three starting points approached the higher-burden candidate. This demonstrates why a single starting point is insufficient: a trajectory can approach a locally optimal combination while missing a better combination elsewhere.
+
+The lower minimum has approximately 9.1% less disease burden than the higher minimum:
+
+$$
+\frac{1.1-1.0}{1.1}\times100\%\approx9.1\%.
+$$
+
+# Numerical Validation
+
+| Candidate | Projected gradient residual | Neighborhood check passed |
+|:---|---:|:---|
+| Lower-burden minimum | 0.000301 | True |
+| Higher-burden minimum | 0.000728 | True |
+
+Both projected gradient residuals were below the selected tolerance of $10^{-3}$. Neither candidate had a lower-scoring point among the eight tested neighbors at coordinate perturbations of 0.002. These results support approximate local stationarity and local minimality at the tested scale.
+
+Given the assignment's stated landscape containing a local and a global minimum, the lower-burden candidate is identified as the estimated global minimum and the higher-burden candidate as the estimated local minimum. However, finite multi-start searches and neighborhood checks do not constitute a mathematical proof of global optimality.
+
+# Query Efficiency and Stopping Reasons
+
+The search used 153 API requests, including 24 requests from Part 2, before candidate validation. Four trajectories stopped after satisfying the projected gradient tolerance. The trajectory starting at $(0.25,0.25)$ exhausted its allocated per-run query allowance, so that trajectory alone should not be described as converged. However, two other trajectories independently approached the same higher-burden minimum and satisfied the gradient criterion.
+
+Reusing the Part 2 result, sharing cached evaluations, and allocating a limited query allowance to each additional start allowed exploration of multiple basins within the overall 200-request budget.
+

@@ -1,4 +1,6 @@
 ## CBB6340
+Name: Lexie Dai
+NetID: ld853
 
 # Exercise 1: Analyzing Population Data Daily New COVID-19 Cases (Project 9.10)
 
